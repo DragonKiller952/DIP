@@ -1,4 +1,5 @@
-from operator import itemgetter
+# This code is the same as the reducer from the WordCount exercise
+
 import sys
 
 current_word = None
