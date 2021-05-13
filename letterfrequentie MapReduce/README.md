@@ -23,7 +23,7 @@ To use it:
   
 This will give the amount of counted English and Dutch Sentences  
 
-testtext contains 73 Dutch and 119 Engels Sentences.
+testtext contains 73 Dutch and 119 English Sentences.
 Running this will give the following output:  
 ![](Testresult.png)
 
