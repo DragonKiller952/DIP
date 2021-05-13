@@ -52,7 +52,7 @@ mapper1.py -> reducer1.py -> mapper2.py -> reducer2.py
 ### mapper1.py
 - Reads text file with sys.stdin
 - Splits it into sentences
-- Replaces punction marks with '$' symbol, and makes all letters lower-case
+- Replaces punctuation marks with '$' symbol, and makes all letters lower-case
 - Splits it into Bigram ***( test -> te, es, st )***
 - Adds a value to the Bigram ***( te, es, st -> (te, 1), (es, 1), (st, 1) )***
 - Prints the Bigrams
