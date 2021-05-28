@@ -1,18 +1,21 @@
 class Computer:
-    def __init__(self, id, net, acc=None):
+    def __init__(self, id, net, acc=None, lea=None):
         self.id = id
         self.failed = False
         self.network = net
         self.acceptors = acc
+        self.learners = lea
         self.prior = False
-        self.changed = False
-        self.accepted = 0
-        self.rejected = 0
-        self.promise = 0
-        self.consensus = False
-        self.initval = 0
-        self.maxval = 0
-        self.maxID = 0
+        self.changed = False #prop
+        self.accepted = 0 #prop
+        self.rejected = 0 #prop
+        self.promise = 0 #prop
+        self.consensus = False #prop
+        self.initval = None #prop
+        self.maxval = None #both
+        self.maxID = 0 #acc
+        self.matrixes = None
+        self.predicted = 0
 
     def DeliverMessage(self, m):
         #         print('im gonna deliver')
@@ -96,6 +99,33 @@ class Computer:
                 mn.value = m.value
                 mn.proposalID = m.proposalID
                 self.network.Queue_Message(mn)
+        elif m.type == 'SUCCESS':
+            if not self.matrixes:
+                matrixnl = {i: {j: 0 for j in 'abcdefghijklmnopqrstuvwxyz $'} for i in
+                                 'abcdefghijklmnopqrstuvwxyz $'}
+                matrixen = {i: {j: 0 for j in 'abcdefghijklmnopqrstuvwxyz $'} for i in
+                                 'abcdefghijklmnopqrstuvwxyz $'}
+                self.matrixes = {'nl': matrixnl, 'en': matrixen}
+            value = m.value
+            value = value.split(':')
+            if len(value[1]) < 2:
+                value[1] += ' '
+            self.matrixes[value[0]][value[1][0]][value[1][1]] += 1
+            self.predicted += 1
+            for i in self.acceptors.keys():
+                self.acceptors[i].maxID = 0
+                self.acceptors[i].maxval = None
+                self.acceptors[i].prior = False
+            proposal = 0
+            mn = Message()
+            mn.type = 'PREDICTED'
+            mn.src = m.dst
+            mn.dst = None
+            mn.value = None
+            mn.proposalID = self.predicted
+            self.network.Queue_Message(mn)
+
+
         else:
             if m.type == 'ACCEPTED':
                 self.accepted += 1
@@ -103,17 +133,25 @@ class Computer:
                 self.rejected += 1
             if self.accepted + self.rejected == len(self.acceptors.keys()):
                 if self.accepted > self.rejected:
+                    self.changed = False
                     self.accepted = 0
                     self.rejected = 0
-                    self.changed = False
                     self.promise = 0
                     self.consensus = True
+                    for i in self.learners.keys():
+                        mn = Message()
+                        mn.type = 'SUCCESS'
+                        mn.src = m.dst
+                        mn.dst = i
+                        mn.value = m.value
+                        mn.proposalID = m.proposalID
+                        self.network.Queue_Message(mn)
                 else:
+                    proposal += 1
+                    self.changed = False
                     self.accepted = 0
                     self.rejected = 0
-                    self.changed = False
                     self.promise = 0
-                    proposal += 1
                     self.maxval = m.value
                     for i in self.acceptors.keys():
                         mn = Message()
@@ -145,7 +183,10 @@ class Network:
 
     def Extract_Message(self):
         for m in self.queue:
-            if 'P' in m.src:
+            if 'L' in m.src or 'L' in m.dst:
+                self.queue.remove(m)
+                return m
+            elif 'P' in m.src:
                 if self.proposers[m.src].failed == False and self.acceptors[m.dst].failed == False:
                     self.queue.remove(m)
                     return m
@@ -156,13 +197,17 @@ class Network:
         return None
 
 
-def Simulate(n_p, n_a, tmax, E):
+def Simulate(n_p, n_a, n_l,tmax, E):
+    ticklen = len(str(tmax))
+    finished = False
     #   /* Initializeer Proposer and Acceptor sets, maak netwerk aan*/
     N = Network()
     A = {'A' + str((i + 1)): Computer('A' + str((i + 1)), N) for i in range(n_a)}
-    P = {'P' + str((i + 1)): Computer('P' + str((i + 1)), N, A) for i in range(n_p)}
+    L = {'L' + str((i + 1)): Computer('L' + str((i + 1)), N, A) for i in range(n_l)}
+    P = {'P' + str((i + 1)): Computer('P' + str((i + 1)), N, A, L) for i in range(n_p)}
     N.proposers = P
     N.acceptors = A
+    N.learners = L
     #     comps = P+A
     global proposal
     proposal = 0
@@ -173,13 +218,14 @@ def Simulate(n_p, n_a, tmax, E):
         if len(N.queue) == 0 and len(E) == 0:
             #             print('empty')
             # Als er geen berichten of zijn of events, dan is de simulatie afgelopen.
-            print()
-            for key in P.keys():
-                if P[key].consensus:
-                    print('{} heeft wel consensus (voorgesteld: {}, geaccepteerd: {})'.format(key, P[key].initval,
-                                                                                              P[key].maxval))
-                else:
-                    print('{} heeft geen consensus.'.format(key))
+            if not finished:
+                print()
+                for key in P.keys():
+                    if P[key].consensus:
+                        print('{} heeft wel consensus (voorgesteld: {}, geaccepteerd: {})'.format(key, P[key].initval,
+                                                                                                  P[key].maxval))
+                    else:
+                        print('{} heeft geen consensus.'.format(key))
             return
         # Verwerk event e (als dat tenminste bestaat)
         e = [i for i in E if i[0] == t]
@@ -202,6 +248,7 @@ def Simulate(n_p, n_a, tmax, E):
                 else:
                     A[c].failed = False
             if pi_v is not None and pi_c is not None:
+                finished = False
                 m = Message()
                 m.type = 'PROPOSE'
                 m.src = None  # PROPOSE-bericht beginnen buiten het netwerk.
@@ -239,8 +286,29 @@ def Simulate(n_p, n_a, tmax, E):
             #                 else:
             #                     P[m.dst].DeliverMessage(m)
             #                 DeliverMessage(m.dst, m)
+                elif m.type == 'SUCCESS':
+                    print('{}: {} -> {}  SUCCESS n={} v={}'.format('%03d' % t, m.src, m.dst, m.proposalID, m.value))
+                    L[m.dst].DeliverMessage(m)
+                elif m.type == 'PREDICTED':
+                    finished = True
+                    print('{}: {} ->     PREDICTED n={}'.format('%03d' % t, m.src, m.proposalID))
+                    print()
+                    for key in P.keys():
+                        print('{} heeft wel consensus (voorgesteld: {}, geaccepteerd: {})'.format(key, P[key].initval,
+                                                                                                  P[key].maxval))
+                        P[key].consensus = False
+                        P[key].initval = None
+                        P[key].maxval = None
+                    print()
             else:
                 print('{}:'.format('%03d' % t))
+
+    for key in P.keys():
+        if P[key].consensus:
+            print('{} heeft wel consensus (voorgesteld: {}, geaccepteerd: {})'.format(key, P[key].initval,
+                                                                                      P[key].maxval))
+        else:
+            print('{} heeft geen consensus.'.format(key))
 
 
 
@@ -252,7 +320,8 @@ def main(file):
     file = file[1:-1]
     n_p = int(start[0])
     n_a = int(start[1])
-    tmax = int(start[2])
+    n_l = int(start[2])
+    tmax = int(start[3])
     #     print(file)
     E = []
 
@@ -276,11 +345,11 @@ def main(file):
             else:
                 current[2].append('A{}'.format(i[-1]))
         elif 'PROPOSE' in i:
-            current[3] = 'P' + i[-2]
-            current[4] = int(i[-1])
+            current[3] = 'P' + i[2]
+            current[4] = ' '.join(i).split(' {} '.format(i[2]))[-1]
     E.append(current)
     #     print(E)
 
-    Simulate(n_p, n_a, tmax, E)
+    Simulate(n_p, n_a, n_l, tmax, E)
 
-main('input2.txt')
+main('inputLearn.txt')
