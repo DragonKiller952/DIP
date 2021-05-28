@@ -112,10 +112,6 @@ class Computer:
                 value[1] += ' '
             self.matrixes[value[0]][value[1][0]][value[1][1]] += 1
             self.predicted += 1
-            for i in self.acceptors.keys():
-                self.acceptors[i].maxID = 0
-                self.acceptors[i].maxval = None
-                self.acceptors[i].prior = False
             proposal = 0
             mn = Message()
             mn.type = 'PREDICTED'
@@ -203,7 +199,7 @@ def Simulate(n_p, n_a, n_l,tmax, E):
     #   /* Initializeer Proposer and Acceptor sets, maak netwerk aan*/
     N = Network()
     A = {'A' + str((i + 1)): Computer('A' + str((i + 1)), N) for i in range(n_a)}
-    L = {'L' + str((i + 1)): Computer('L' + str((i + 1)), N, A) for i in range(n_l)}
+    L = {'L' + str((i + 1)): Computer('L' + str((i + 1)), N) for i in range(n_l)}
     P = {'P' + str((i + 1)): Computer('P' + str((i + 1)), N, A, L) for i in range(n_p)}
     N.proposers = P
     N.acceptors = A
@@ -292,6 +288,11 @@ def Simulate(n_p, n_a, n_l,tmax, E):
                 elif m.type == 'PREDICTED':
                     finished = True
                     print('{}: {} ->     PREDICTED n={}'.format('%03d' % t, m.src, m.proposalID))
+                    for i in A.keys():
+                        A[i].maxID = 0
+                        A[i].maxval = None
+                        A[i].prior = False
+
                     print()
                     for key in P.keys():
                         print('{} heeft wel consensus (voorgesteld: {}, geaccepteerd: {})'.format(key, P[key].initval,
