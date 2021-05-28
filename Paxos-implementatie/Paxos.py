@@ -64,7 +64,7 @@ class Computer:  # Machines performing a simulation to receive consensus
                     mn.value = m.value
                     mn.proposalID = m.proposalID
                     self.network.Queue_Message(mn)
-                else: # If request is not outdated, accept request
+                else:  # If request is not outdated, accept request
                     self.maxID = m.proposalID
                     self.value = m.value
                     mn = Message()
@@ -206,6 +206,14 @@ def Simulate(n_p, n_a, tmax, E):  # Runs Paxos simulation with given events
             else:
                 print('{}:'.format('%03d' % t))
 
+    # Prints consensus if tmax was reached
+    for key in P.keys():
+        if P[key].consensus:
+            print('{} heeft wel consensus (voorgesteld: {}, geaccepteerd: {})'.format(key, P[key].initval,
+                                                                                      P[key].value))
+        else:
+            print('{} heeft geen consensus.'.format(key))
+
 
 def main(file):  # Converts input and initialises simulation
     file = open(file, 'r')
@@ -221,7 +229,7 @@ def main(file):  # Converts input and initialises simulation
     current = None
     for i in file:
         i = i.split(' ')
-        if current == None:
+        if current is None:
             current = [int(i[0]), [], [], None, None]
         if int(i[0]) != current[0]:
             E.append(current)
@@ -245,4 +253,5 @@ def main(file):  # Converts input and initialises simulation
     Simulate(n_p, n_a, tmax, E)
 
 
-main('input2.txt')
+if __name__ == '__main__':
+    main('input2.txt')  # Currently example 2, change to 'input.txt' for example 1
