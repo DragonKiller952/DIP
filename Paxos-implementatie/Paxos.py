@@ -1,17 +1,17 @@
 class Computer:  # Machines performing a simulation to receive consensus
     def __init__(self, net, acc=None):
-        self.failed = False
-        self.network = net
-        self.acceptors = acc
-        self.prior = False
-        self.changed = False
-        self.accepted = 0
-        self.rejected = 0
-        self.promise = 0
-        self.consensus = False
-        self.initval = 0
-        self.value = 0
-        self.maxID = 0
+        self.failed = False  # If failed the computer is unusable. Default is Not Failed (proposers & acceptors)
+        self.network = net  # Connects the computer to the network for messages it sends (proposers & acceptors)
+        self.acceptors = acc  # Knows the acceptor ID's to send a messages to (proposers)
+        self.prior = False  # Tells if the computer has priority of sending a message. Default is False (acceptors)
+        self.changed = False  # Tells if the computer has changed during the simulation. Default is False (proposers)
+        self.accepted = 0  # Tells the amount of accepted messages received. Default is 0 (proposers)
+        self.rejected = 0  # Tells the amount of rejected messages received. Default is 0 (proposers)
+        self.promise = 0  # Tells the amount of promised messages received. Default is 0 (proposers)
+        self.consensus = False  # Tells if the consensus was reached in the current round. Default is False (proposers)
+        self.initval = None  # Tells the value the proposal request started with (proposers)
+        self.value = None  # Tells the current value it holds if it needs to send a message (proposers & acceptors)
+        self.maxID = 0  # Tells the highest proposal request ID it has seen this round (acceptor)
 
     def DeliverMessage(self, m):  # Performs an action based on the message type
         global proposal
