@@ -1,3 +1,5 @@
+# Code by Quinn de Groot, Ruben van Raaij and Guy Veenhof
+
 class Computer:  # Machines performing a simulation to receive consensus, and learn new data
     def __init__(self, net, acc=None, lea=None):
         self.failed = False  # If failed the computer is unusable. Default is Not Failed (proposers & acceptors)
